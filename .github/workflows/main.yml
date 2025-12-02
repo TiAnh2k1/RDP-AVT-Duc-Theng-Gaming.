@@ -52,19 +52,25 @@ jobs:
           Start-Service sshd
           New-NetFirewallRule -Name "SSH Access" -DisplayName "SSH Access" -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
 
-      # ** BƯỚC MỚI: Dọn dẹp hệ thống **
+      # 3. Dọn dẹp hệ thống
       - name: System Optimization (Cleanup)
         run: |
           Write-Host "Bắt đầu dọn dẹp file rác hệ thống..."
-          # Xóa các file trong thư mục Temp của Windows
           Remove-Item -Path C:\Windows\Temp\* -Recurse -Force -ErrorAction SilentlyContinue
-          # Xóa các file trong thư mục Temp của người dùng
           Remove-Item -Path $env:TEMP\* -Recurse -Force -ErrorAction SilentlyContinue
-          # Xóa các file log và cache không cần thiết khác
-          Get-ChildItem -Path C:\ -Include *.log, *.tmp -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
           Write-Host "Dọn dẹp hoàn tất!"
 
-      # 3. Hiển thị thông báo hướng dẫn
+      # ** 4. BƯỚC MỚI: Cài đặt và chạy Container Linux (Ubuntu) **
+      - name: Run Linux Container (Ubuntu)
+        run: |
+          Write-Host "Kích hoạt support Linux Container..."
+          # Lệnh này sẽ tải image và chạy một container Ubuntu ở chế độ nền.
+          # Lệnh 'sleep infinity' giúp container hoạt động liên tục.
+          docker run -d --name linux_support --restart always ubuntu:latest sleep infinity
+          Write-Host "Container Linux 'linux_support' (Ubuntu) đã hoạt động ở chế độ nền."
+          Write-Host "Truy cập bằng lệnh: docker exec -it linux_support bash"
+
+      # 5. Hiển thị thông báo hướng dẫn
       - name: Hướng dẫn kết nối và sử dụng Linux
         run: |
           Write-Host "==================================================="
@@ -77,12 +83,14 @@ jobs:
           Write-Host "   User: DucThengGaming"
           Write-Host "   Pass: (Dùng mật khẩu bạn đã đặt trong Secret RDP_PASSWORD)"
           Write-Host ""
-          Write-Host "▶ Kết nối RDP (GUI): IP đó, Port 3389"
-          Write-Host "▶ Kết nối SSH (Dòng lệnh): IP đó, Port 22"
-          Write-Host "   (Trong RDP/SSH, gõ 'bash' để chuyển sang môi trường Linux-style)."
+          Write-Host "▶ Kết nối RDP (GUI) hoặc SSH (CLI)."
+          Write-Host ""
+          Write-Host "*** SỬ DỤNG MÔI TRƯỜNG LINUX (UBUNTU) ***"
+          Write-Host "   Sau khi kết nối RDP/SSH, gõ lệnh sau để vào Ubuntu:"
+          Write-Host "   docker exec -it linux_support bash"
           Write-Host "==================================================="
 
-      # 4. Treo máy (Keep Alive)
+      # 6. Treo máy (Keep Alive)
       - name: Keep Alive
         run: |
           Write-Host "Đang chạy... Đừng đóng tab này."
