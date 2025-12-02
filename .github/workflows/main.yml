@@ -1,0 +1,91 @@
+name: 🚀 AVT Duc Theng Gaming 🚀
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 360 
+
+    steps:
+      # 1. Kết nối vào mạng Tailscale (Không đổi)
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }} 
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}       
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: latest
+          hostname: github-vps-windows
+
+      # 2. Cấu hình Tài khoản, RDP, SSH, và Banner
+      - name: Configure User, RDP and SSH
+        env:
+          USER_PASSWORD: ${{ secrets.RDP_PASSWORD }} 
+        run: |
+          $NewUser = "DucThengGaming"
+          $NewPass = $env:USER_PASSWORD
+          $SecurePass = ConvertTo-SecureString $NewPass -AsPlainText -Force
+
+          # A. Tạo/Cập nhật tài khoản
+          if (-not (Get-LocalUser -Name $NewUser -ErrorAction SilentlyContinue)) {
+            New-LocalUser -Name $NewUser -Password $SecurePass -FullName "Gaming VPS User" -Description "Custom GitHub RDP User"
+            Add-LocalGroupMember -Group "Administrators" -Member $NewUser
+          } else {
+            Set-LocalUser -Name $NewUser -Password $SecurePass
+          }
+
+          # B. Tạo RDP INTRO/PREMIUM SIÊU XỊN
+          $IntroTitle = "💎 VPS PREMIUM SIÊU XỊN: DUC THENG GAMING! 💎"
+          $IntroText = "WELCOME, BOSS! Đây là một phiên làm việc miễn phí, giới hạn 6 tiếng. Vui lòng TẬN DỤNG TỐI ĐA tài nguyên và lưu trữ dữ liệu an toàn. Chúc bạn có trải nghiệm tuyệt vời!"
+          
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "legalnoticecaption" -Value $IntroTitle
+          Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "legalnoticetext" -Value $IntroText
+          
+          # C. Bật RDP và SSH
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+          
+          Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+          Set-Service -Name sshd -StartupType Automatic
+          Start-Service sshd
+          New-NetFirewallRule -Name "SSH Access" -DisplayName "SSH Access" -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+
+      # ** BƯỚC MỚI: Dọn dẹp hệ thống **
+      - name: System Optimization (Cleanup)
+        run: |
+          Write-Host "Bắt đầu dọn dẹp file rác hệ thống..."
+          # Xóa các file trong thư mục Temp của Windows
+          Remove-Item -Path C:\Windows\Temp\* -Recurse -Force -ErrorAction SilentlyContinue
+          # Xóa các file trong thư mục Temp của người dùng
+          Remove-Item -Path $env:TEMP\* -Recurse -Force -ErrorAction SilentlyContinue
+          # Xóa các file log và cache không cần thiết khác
+          Get-ChildItem -Path C:\ -Include *.log, *.tmp -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force
+          Write-Host "Dọn dẹp hoàn tất!"
+
+      # 3. Hiển thị thông báo hướng dẫn
+      - name: Hướng dẫn kết nối và sử dụng Linux
+        run: |
+          Write-Host "==================================================="
+          Write-Host "VPS ĐÃ SẴN SÀNG! (Thời gian chạy tối đa: ${{ github.job.timeout-minutes }} phút)"
+          Write-Host "1. Mở Tailscale trên máy tính của bạn."
+          Write-Host "2. Tìm thiết bị có tên: github-vps-windows"
+          Write-Host "3. Copy địa chỉ IP của nó (thường là 100.x.x.x)."
+          Write-Host ""
+          Write-Host "▶ THÔNG TIN ĐĂNG NHẬP:"
+          Write-Host "   User: DucThengGaming"
+          Write-Host "   Pass: (Dùng mật khẩu bạn đã đặt trong Secret RDP_PASSWORD)"
+          Write-Host ""
+          Write-Host "▶ Kết nối RDP (GUI): IP đó, Port 3389"
+          Write-Host "▶ Kết nối SSH (Dòng lệnh): IP đó, Port 22"
+          Write-Host "   (Trong RDP/SSH, gõ 'bash' để chuyển sang môi trường Linux-style)."
+          Write-Host "==================================================="
+
+      # 4. Treo máy (Keep Alive)
+      - name: Keep Alive
+        run: |
+          Write-Host "Đang chạy... Đừng đóng tab này."
+          while ($true) {
+            Start-Sleep -Seconds 60
+          }
